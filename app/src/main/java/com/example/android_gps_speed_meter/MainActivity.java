@@ -5,21 +5,30 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.app.ActivityCompat;
 
+import android.app.PendingIntent;
+import android.app.PictureInPictureParams;
+import android.app.RemoteAction;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Icon;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
 import com.example.android_gps_speed_meter.databinding.ActivityMainBinding;
 
+import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 import java.util.Locale;
 
 import android.Manifest;
+import android.util.Rational;
+import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.Toast;
 
@@ -51,6 +60,11 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                 MainActivity.this.updateSpeed(null);
             }
         });
+
+
+        binding.fabPip.setOnClickListener(View-> {
+            enterPipMode();
+        });
     }
 
     public void speedCalculation() {
@@ -73,7 +87,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         }
 
         Formatter fmt = new Formatter(new StringBuilder());
-        fmt.format(Locale.US,"%5.1f",nCurrentSpeed);
+        fmt.format(Locale.US,"%3.1f",nCurrentSpeed);
         String strCurrentSpeed = fmt.toString();
         strCurrentSpeed = strCurrentSpeed.replace(" ","0");
 
@@ -84,6 +98,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
             //false means mile system
             binding.tvSpeedMainActivity.setText(strCurrentSpeed + "miles/h");
         }
+
     }
 
     private boolean userMetricUnit(){
@@ -115,6 +130,67 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                 finish();
             }
         }
+    }
+
+    //This method is triggered when
+    //Home button is pressed.
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        enterPipMode();
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode);
+        if (isInPictureInPictureMode){
+            binding.switch1.setVisibility(View.GONE);
+            binding.fabPip.setVisibility(View.GONE);
+
+        } else {
+            binding.switch1.setVisibility(View.VISIBLE);
+            binding.fabPip.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void enterPipMode() {
+        ArrayList<RemoteAction> actions = new ArrayList<>();
+
+        PendingIntent pendingIntent = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            pendingIntent = PendingIntent.getActivity(
+                    this,
+                    0,
+                    new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/nazmos-sakib/GPS_Speed_Meter")),
+                    PendingIntent.FLAG_MUTABLE
+            );
+        }
+        else
+        {
+            pendingIntent = PendingIntent.getActivity(
+                    this,
+                    0,
+                    new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/nazmos-sakib/GPS_Speed_Meter")),
+                    PendingIntent.FLAG_ONE_SHOT
+            );
+        }
+
+
+        RemoteAction remoteAction = new RemoteAction(
+                Icon.createWithResource(this,R.drawable.ic_info_24),
+                "Info","Info Details",
+                pendingIntent
+                );
+
+        actions.add(remoteAction);
+        Rational aspectRatio = new Rational(1, 1);
+
+        PictureInPictureParams params = new PictureInPictureParams
+                .Builder()
+                .setAspectRatio(aspectRatio)
+                .setActions(actions)
+                .build();
+        enterPictureInPictureMode(params);
     }
 
 }
